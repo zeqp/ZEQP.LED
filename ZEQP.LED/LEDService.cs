@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
@@ -8,34 +10,31 @@ using System.Threading.Tasks;
 using Topshelf;
 using Topshelf.Logging;
 using ZEQP.LED.Models;
-using Newtonsoft.Json;
 namespace ZEQP.LED
 {
     public class LEDService : ServiceControl
     {
-        public LogWriter Log { get; set; }
-        public string CardIP { get; set; }
-        public uint CardPort { get; set; }
+        private LogWriter Log { get; set; }
+        private string CardIP { get; set; }
+        private uint CardPort { get; set; }
         /// <summary>
         /// 是否初始化
         /// </summary>
-        public bool IsReady { get; set; }
+        private bool IsReady { get; set; }
         /// <summary>
         /// 设备ID
         /// </summary>
-        public uint DeviceId { get; set; }
+        private uint DeviceId { get; set; }
         /// <summary>
         /// 设备是否在线
         /// </summary>
-        public bool DeviceOnline { get; set; }
+        private bool DeviceOnline { get; set; }
         private ZHLED.LedAgent.OnDeviceNotify DeviceCallback { get; set; }
 
-        private System.Timers.Timer GetDataTimer { get; set; }
+        private ConcurrentQueue<OrderGroupModel> QueueData { get; set; }
         private System.Timers.Timer ShowDataTimer { get; set; }
 
-        public List<BaseOrderModel> ListData { get; set; }
-        //public ILookup<OrderGroupModel, BaseOrderModel> LookupData { get; set; }
-        //public IGrouping<OrderGroupModel,BaseOrderModel> CurData { get; set; }
+
         public LEDService()
         {
             this.CardIP = ConfigurationManager.AppSettings["CardIP"];
@@ -48,43 +47,81 @@ namespace ZEQP.LED
             this.DeviceOnline = false;
             this.DeviceCallback = new ZHLED.LedAgent.OnDeviceNotify(OnDeviceNotified);
 
-
-            this.GetDataTimer = new System.Timers.Timer(5 * 1000);
-            this.GetDataTimer.Elapsed += GetDataTimer_Elapsed;
-            this.ListData = new List<BaseOrderModel>();
+            this.ShowDataTimer = new System.Timers.Timer(5000);
+            this.ShowDataTimer.Elapsed += ShowDataTimer_Elapsed;
         }
 
-        private void GetDataTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private void ShowDataTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             var timer = sender as System.Timers.Timer;
             try
             {
                 timer.Stop();
-                this.ListData.Clear();
+                if (this.QueueData.IsEmpty)
+                    this.GetData();
+                else
+                {
+                    OrderGroupModel CurData = null;
+                    var canDequeue = this.QueueData.TryDequeue(out CurData);
+                    if (canDequeue)
+                    {
+                        this.Log.Info($"显示数据：{Environment.NewLine}{JsonConvert.SerializeObject(CurData)}");
+                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0, 1, new StringBuilder(CurData.Type), 61);
+                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0, 1, new StringBuilder(CurData.ProjectNo), 62);
+                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0, 1, new StringBuilder(CurData.OrderTime.ToString("yyyy-MM-dd HH:mm")), 63);
+                        if (CurData.ListData.Count > 6)
+                        {
+                            var newModel = new OrderGroupModel()
+                            {
+                                Type = CurData.Type,
+                                ProjectNo = CurData.ProjectNo,
+                                OrderTime = CurData.OrderTime,
+                                ListData = CurData.ListData.OrderBy(o => o.RowNum).Skip(6).ToList()
+                            };
+                            this.QueueData.Enqueue(newModel);
+                        }
+                        var listData = CurData.ListData.OrderBy(o => o.RowNum).Take(6).ToList();
+                        var fieldId = 11U;
+                        foreach (var item in listData)
+                        {
+                            ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(item.ToString()), fieldId);
+                            fieldId += 10U;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                this.Log.Error(ex.Message, ex);
+            }
+            finally
+            {
+                timer.Start();
+            }
+        }
+
+        private void GetData()
+        {
+            try
+            {
                 var inOrder = LEDData.GetInOrder();
                 this.Log.Info("入库数据：\r\n" + JsonConvert.SerializeObject(inOrder));
-                this.ListData.AddRange(inOrder);
+                var inGroup = LEDData.Convert(inOrder);
+                foreach (var item in inGroup)
+                {
+                    this.QueueData.Enqueue(item);
+                }
                 var outOrder = LEDData.GetOutOrder();
                 this.Log.Info("出库数据：\r\n" + JsonConvert.SerializeObject(outOrder));
-                this.ListData.AddRange(outOrder);
-                var lookupData = this.ListData.ToLookup(k => new { k.Type, k.ProjectNo, k.OrderTime });
-                foreach (var item in lookupData)
+                var outGroup = LEDData.Convert(outOrder);
+                foreach (var item in outGroup)
                 {
-                    this.Log.Info($"类型:{item.Key.Type},项目：{item.Key.ProjectNo},时间：{item.Key.OrderTime}");
-                    foreach (var row in item)
-                    {
-                        this.Log.Info($"序号：{row.Seq},物料:{row.Code}");
-                    }
-                    Thread.Sleep(5 * 1000);
+                    this.QueueData.Enqueue(item);
                 }
             }
             catch (Exception ex)
             {
                 this.Log.Error("获取数据出错", ex);
-            }
-            finally
-            {
-                timer.Start();
             }
         }
         public void OnDeviceNotified(uint uDeviceId, IntPtr pNotifiedData, uint uCommand, IntPtr pUserParam)
@@ -115,7 +152,7 @@ namespace ZEQP.LED
             {
                 this.DeviceId = driveId;
                 this.Log.Info($"添加设备成功,设备ID：{driveId}");
-                this.GetDataTimer.Start();
+                this.ShowDataTimer.Start();
                 return true;
             }
             this.Log.Error("添加设备失败");
@@ -128,7 +165,7 @@ namespace ZEQP.LED
                 ZHLED.LedAgent.UnregisterDevice(this.DeviceId);
             if (this.IsReady)
                 ZHLED.LedAgent.DeInit();
-            this.GetDataTimer.Stop();
+            this.ShowDataTimer.Stop();
             this.DeviceId = 0;
             this.DeviceOnline = false;
             this.IsReady = false;

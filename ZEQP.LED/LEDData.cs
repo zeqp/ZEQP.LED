@@ -37,7 +37,31 @@ namespace ZEQP.LED
             }
             return result;
         }
+        public static List<OrderGroupModel> Convert<T>(List<T> listOrder)
+            where T : BaseOrderModel
+        {
+            var result = new List<OrderGroupModel>();
+            var projectLookup = listOrder.ToLookup(k => k.ProjectNo);
 
+            foreach (var project in projectLookup)
+            {
+                var model = new OrderGroupModel();
+                model.ProjectNo = project.Key;
+                var list = project.ToList();
+                model.Type = list.Select(s => s.Type).FirstOrDefault();
+                model.OrderTime = list.Max(o => o.OrderTime);
+                model.ListData = list.Select((s, index) => new DisplayRowModel()
+                {
+                    RowNum = index + 1,
+                    Code = s.Code,
+                    Count = s.Count,
+                    Total = s.Total,
+                    BoxNo = s.BoxNo
+                }).ToList();
+                result.Add(model);
+            }
+            return result;
+        }
         public static List<V_OutOrder> GetOutOrder()
         {
             var connStr = ConfigurationManager.ConnectionStrings["oracle"].ConnectionString;

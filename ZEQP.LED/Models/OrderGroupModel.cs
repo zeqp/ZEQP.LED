@@ -9,7 +9,7 @@ namespace ZEQP.LED.Models
     public class OrderGroupModel
     {
         /// <summary>
-        /// 类型
+        /// 类型（出库/入库）
         /// </summary>
         public string Type { get; set; }
         /// <summary>
@@ -17,8 +17,12 @@ namespace ZEQP.LED.Models
         /// </summary>
         public string ProjectNo { get; set; }
         /// <summary>
-        /// 入库时间
+        /// 出库/入库 时间
         /// </summary>
         public DateTime OrderTime { get; set; }
+        /// <summary>
+        /// 列表数据
+        /// </summary>
+        public List<DisplayRowModel> ListData { get; set; }
     }
 }

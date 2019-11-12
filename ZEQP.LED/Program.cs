@@ -12,9 +12,9 @@ namespace ZEQP.LED
         {
             var rc = HostFactory.Run(x =>
             {
-                x.SetServiceName("WMSQRService");
-                x.SetDisplayName("WMSQRService");
-                x.SetDescription("WMS二维码服务");
+                x.SetServiceName("ZEQPLedDisplay");
+                x.SetDisplayName("ZEQPLedDisplay");
+                x.SetDescription("中南智能LED显示屏物料服务");
                 x.Service<LEDService>();
                 x.StartAutomatically();
                 x.RunAsLocalSystem();
