@@ -17,5 +17,6 @@ namespace ZEQP.LED.Models
         {
             return $"{this.RowNum.ToString().PadCenter(3)}|{this.Code.PadCenter(12)}|{this.Count.ToString().PadCenter(5)}|{this.Total.ToString().PadCenter(5)}|{this.BoxNo.PadCenter(10)}";
         }
+        public static string Empty => $"{string.Empty.PadCenter(3)}|{string.Empty.PadCenter(12)}|{string.Empty.PadCenter(5)}|{string.Empty.PadCenter(5)}|{string.Empty.PadCenter(10)}";
     }
 }

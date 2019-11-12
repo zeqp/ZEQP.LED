@@ -66,9 +66,9 @@ namespace ZEQP.LED
                     if (canDequeue)
                     {
                         this.Log.Info($"显示数据：{Environment.NewLine}{JsonConvert.SerializeObject(CurData)}");
-                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0, 1, new StringBuilder(CurData.Type), 61);
-                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0, 1, new StringBuilder(CurData.ProjectNo), 62);
-                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0, 1, new StringBuilder(CurData.OrderTime.ToString("yyyy-MM-dd HH:mm")), 63);
+                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(CurData.Type), 61U);
+                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(CurData.ProjectNo), 62U);
+                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(CurData.OrderTime.ToString("yyyy-MM-dd HH:mm")), 63U);
                         if (CurData.ListData.Count > 6)
                         {
                             var newModel = new OrderGroupModel()
@@ -81,11 +81,11 @@ namespace ZEQP.LED
                             this.QueueData.Enqueue(newModel);
                         }
                         var listData = CurData.ListData.OrderBy(o => o.RowNum).Take(6).ToList();
-                        var fieldId = 11U;
-                        foreach (var item in listData)
+                        for (int i = 0; i < 6; i++)
                         {
-                            ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(item.ToString()), fieldId);
-                            fieldId += 10U;
+                            var item = listData.ElementAtOrDefault(i);
+                            var text = new StringBuilder(item == null ? DisplayRowModel.Empty : item.ToString());
+                            ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, text, (uint)((i + 1) * 10 + 1));
                         }
                     }
                 }
