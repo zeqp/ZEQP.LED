@@ -57,11 +57,11 @@ namespace ZEQP.LED
             try
             {
                 timer.Stop();
-                //if (!this.IsReady || !this.DeviceOnline)
-                //{
-                //    this.Log.Info("正在等待连接设备");
-                //    return;
-                //}
+                if (!this.IsReady || !this.DeviceOnline)
+                {
+                    this.Log.Info("正在等待连接设备");
+                    return;
+                }
                 if (this.QueueData.IsEmpty)
                     this.GetData();
                 else
@@ -136,7 +136,7 @@ namespace ZEQP.LED
             {
                 this.DeviceOnline = (pNotifiedData != null && (int)pNotifiedData != 0);
             }
-            this.Log.Info($"OnDeviceNotified:\r\nDeviceId:{uDeviceId}\r\nCommand:{uCommand}\r\nDeviceOnline:{this.DeviceOnline}");
+            //this.Log.Info($"OnDeviceNotified:\r\nDeviceId:{uDeviceId}\r\nCommand:{uCommand}\r\nDeviceOnline:{this.DeviceOnline}");
         }
         public bool Start(HostControl hostControl)
         {
