@@ -12,7 +12,7 @@ namespace ZEQP.LED
         {
             var len = source.Length;
             if (source.Length >= width) return source;
-            var diffWidth = len - width;
+            var diffWidth = width - len;
             var leftWidth = (diffWidth % 2 == 1) ? (((diffWidth - 1) / 2) + 1 + len) : ((diffWidth / 2) + len);
             return source.PadLeft(leftWidth, paddingChar).PadRight(width, paddingChar);
         }

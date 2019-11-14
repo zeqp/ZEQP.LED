@@ -46,7 +46,7 @@ namespace ZEQP.LED
             this.IsReady = false;
             this.DeviceOnline = false;
             this.DeviceCallback = new ZHLED.LedAgent.OnDeviceNotify(OnDeviceNotified);
-
+            this.QueueData = new ConcurrentQueue<OrderGroupModel>();
             this.ShowDataTimer = new System.Timers.Timer(5000);
             this.ShowDataTimer.Elapsed += ShowDataTimer_Elapsed;
         }
@@ -57,6 +57,11 @@ namespace ZEQP.LED
             try
             {
                 timer.Stop();
+                //if (!this.IsReady || !this.DeviceOnline)
+                //{
+                //    this.Log.Info("正在等待连接设备");
+                //    return;
+                //}
                 if (this.QueueData.IsEmpty)
                     this.GetData();
                 else
@@ -66,9 +71,10 @@ namespace ZEQP.LED
                     if (canDequeue)
                     {
                         this.Log.Info($"显示数据：{Environment.NewLine}{JsonConvert.SerializeObject(CurData)}");
-                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(CurData.Type), 61U);
-                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(CurData.ProjectNo), 62U);
-                        ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(CurData.OrderTime.ToString("yyyy-MM-dd HH:mm")), 63U);
+                        var showTextSuccess = 0;
+                        showTextSuccess = ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(CurData.Type), 71U);
+                        showTextSuccess = ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(CurData.ProjectNo), 72U);
+                        showTextSuccess = ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, new StringBuilder(CurData.OrderTime.ToString("yyyy-MM-dd HH:mm")), 73U);
                         if (CurData.ListData.Count > 6)
                         {
                             var newModel = new OrderGroupModel()
@@ -85,7 +91,7 @@ namespace ZEQP.LED
                         {
                             var item = listData.ElementAtOrDefault(i);
                             var text = new StringBuilder(item == null ? DisplayRowModel.Empty : item.ToString());
-                            ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, text, (uint)((i + 1) * 10 + 1));
+                            showTextSuccess = ZHLED.LedAgent.ShowInstantText(this.DeviceId, 0U, 1U, text, (uint)((i + 1) * 10 + 1));
                         }
                     }
                 }
