@@ -110,16 +110,35 @@ namespace ZEQP.LED
         {
             try
             {
-                var inOrder = LEDData.GetInOrder();
-                this.Log.Info("入库数据：\r\n" + JsonConvert.SerializeObject(inOrder));
-                var inGroup = LEDData.Convert(inOrder);
+                var rand = new Random();
+                var now = DateTime.Now;
+                var listProjectNo = new List<string>();
+                for (int i = 0; i < 3; i++)
+                {
+                    listProjectNo.Add($"{rand.Next(now.Year - 2, now.Year + 1).ToString().Substring(2)}CTSF0{rand.Next(1, 99).ToString().PadLeft(2, '0')}");
+                }
+                var listInOrder = new List<V_InOrder>();
+                for (int i = 0; i < 18; i++)
+                {
+                    var inData = new V_InOrder() { Seq = i, Type = "入库", Code = $"A01202090{rand.Next(101, 379)}", ProjectNo = listProjectNo[i % 3], Count = 1, Total = rand.Next(1, 5), BoxNo = $"B01-020{rand.Next(1, 7)}{rand.Next(1, 16).ToString().PadLeft(2, '0')}", OrderTime = DateTime.Now.AddHours(-2).AddMinutes(rand.Next(1, 80)) };
+                    listInOrder.Add(inData);
+                }
+                //var inOrder = LEDData.GetInOrder();
+                //this.Log.Info("入库数据：\r\n" + JsonConvert.SerializeObject(inOrder));
+                var inGroup = LEDData.Convert(listInOrder);
                 foreach (var item in inGroup)
                 {
                     this.QueueData.Enqueue(item);
                 }
-                var outOrder = LEDData.GetOutOrder();
-                this.Log.Info("出库数据：\r\n" + JsonConvert.SerializeObject(outOrder));
-                var outGroup = LEDData.Convert(outOrder);
+                //var outOrder = LEDData.GetOutOrder();
+                //this.Log.Info("出库数据：\r\n" + JsonConvert.SerializeObject(outOrder));
+                var listOutOrder = new List<V_OutOrder>();
+                for (int i = 0; i < 18; i++)
+                {
+                    var outData = new V_OutOrder() { Seq = i, Type = "出库", Code = $"A01202090{rand.Next(101, 379)}", ProjectNo = listProjectNo[i % 3], Count = 1, Total = rand.Next(1, 5), BoxNo = $"B01-020{rand.Next(1, 7)}{rand.Next(1, 16).ToString().PadLeft(2, '0')}", OrderTime = DateTime.Now.AddHours(-2).AddMinutes(rand.Next(1, 80)) };
+                    listOutOrder.Add(outData);
+                }
+                var outGroup = LEDData.Convert(listOutOrder);
                 foreach (var item in outGroup)
                 {
                     this.QueueData.Enqueue(item);
